@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #E6e6fa;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #d8bfd8;
+        }
+        .hidden {
+            display: none;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: bold;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .btn {
+            background-color: #d8bfd8;
+            color: white;
+            border: none;
+            padding: 10px;
+            width: 100%;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        .btn:hover {
+            background-color: #d8bfd8;
+        }
+        .status {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 18px;
+            color: #333;
+        }
+        .attendance {
+            text-align: center;
+            padding-top: 20px;
+        }
+        .attendance p {
+            margin: 5px 0;
+        }
+        .attendance span {
+            font-weight: bold;
+            color: #333;
+        }
+        .checkInList {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+            width: 300px;
+            box-sizing: border-box;
+        }
+        .checkInList table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .checkInList th, .checkInList td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .checkInList th {
+            background-color: #f4f4f4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loginSection">
+            <h1>Attendance App</h1>
+            <div class="form-group">
+                <label for="name">Enter your Name:</label>
+                <input type="text" id="name" placeholder="Your Name">
+            </div>
+            <button class="btn" onclick="login()">Log In</button>
+        </div>
+        <div id="setPasswordSection" class="hidden">
+            <h1>Set Password</h1>
+            <div class="form-group">
+                <label for="password">Set your Password:</label>
+                <input type="password" id="password" placeholder="Password">
+            </div>
+            <button class="btn" onclick="setPassword()">Set Password</button>
+        </div>
+        <div id="attendanceSection" class="hidden">
+            <h1>Welcome, <span id="userName"></span></h1>
+            <div class="attendance">
+                <p>Check-in Time: <span id="checkInTime">Not yet checked in</span></p>
+                <p>Check-out Time: <span id="checkOutTime">Not yet checked out</span></p>
+            </div>
+            <div class="status" id="status"></div>
+            <div class="form-group">
+                <button class="btn" onclick="checkIn()">Check In</button>
+            </div>
+            <div class="form-group">
+                <button class="btn" onclick="checkOut()">Check Out</button>
+            </div>
+            <div class="form-group">
+                <button class="btn" onclick="logout()">Log Out</button>
+            </div>
+            <div class="form-group">
+                <button class="btn" onclick="reset()">Reset Local Storage</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="checkInList" id="checkInList">
+        <h3>Checked In:</h3>
+        <table id="attendanceTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Check In Time</th>
+                    <th>Check Out Time</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
+    <script>
+        let currentUser = '';
+        let checkInTime = null;
+        let checkOutTime = null;
+        let userPassword = '';
+        let checkInData = JSON.parse(localStorage.getItem('checkInData')) || {};
+        let passwords = JSON.parse(localStorage.getItem('passwords')) || {};
+        window.onload = function() {
+            if (localStorage.getItem('currentUser')) {
+                currentUser = localStorage.getItem('currentUser');
+                document.getElementById("userName").innerText = currentUser;
+                document.getElementById("loginSection").classList.add('hidden');
+                document.getElementById("attendanceSection").classList.remove('hidden');
+                if (localStorage.getItem('checkInTime')) {
+                    checkInTime = new Date(localStorage.getItem('checkInTime'));
+                    document.getElementById("checkInTime").innerText = checkInTime.toLocaleString();
+                }
+                if (localStorage.getItem('checkOutTime')) {
+                    checkOutTime = new Date(localStorage.getItem('checkOutTime'));
+                    document.getElementById("checkOutTime").innerText = checkOutTime.toLocaleString();
+                }
+                if (passwords[currentUser]) {
+                    userPassword = passwords[currentUser];
+                } else {
+                    document.getElementById("attendanceSection").classList.add('hidden');
+                    document.getElementById("setPasswordSection").classList.remove('hidden');
+                }
+            }
+        };
+        function login() {
+            currentUser = document.getElementById("name").value;
+            if (currentUser.trim() === '') {
+                alert("Please enter your name!");
+                return;
+            }
+            localStorage.setItem('currentUser', currentUser);
+            document.getElementById("userName").innerText = currentUser;
+            if (passwords[currentUser]) {
+                const enteredPassword = prompt("Please enter your password:");
+                if (enteredPassword === passwords[currentUser]) {
+                    document.getElementById("loginSection").classList.add('hidden');
+                    document.getElementById("attendanceSection").classList.remove('hidden');
+                } else {
+                    alert("Incorrect password. Please try again.");
+                    localStorage.removeItem('currentUser'); 
+                }
+            } else {
+                document.getElementById("loginSection").classList.add('hidden');
+                document.getElementById("setPasswordSection").classList.remove('hidden');
+            }
+        }
+        function setPassword() {
+            userPassword = document.getElementById("password").value;
+            passwords[currentUser] = userPassword;
+            localStorage.setItem('passwords', JSON.stringify(passwords));
+            document.getElementById("setPasswordSection").classList.add('hidden');
+            document.getElementById("attendanceSection").classList.remove('hidden');
+        }
+        function checkIn() {
+            if (checkInTime) {
+                const password = prompt("Please enter your password to check in again:");
+                if (password !== userPassword) {
+                    alert("Incorrect password!");
+                    return;
+                }
+                checkOutTime = null;
+                document.getElementById("checkOutTime").innerText = "Not yet checked out";
+                document.getElementById("status").innerText = "You have checked in again!";
+            }
+            checkInTime = new Date();
+            document.getElementById("checkInTime").innerText = checkInTime.toLocaleString();
+            localStorage.setItem('checkInTime', checkInTime.toString()); 
+            localStorage.setItem('checkOutTime', ''); 
+            checkInData[currentUser] = { checkIn: checkInTime.toString(), checkOut: '' };
+            localStorage.setItem('checkInData', JSON.stringify(checkInData));
+            updateList(); 
+        }
+        function checkOut() {
+            if (!checkInTime) {
+                alert("You must check in first.");
+                return;
+            }
+            if (!checkOutTime) {
+                checkOutTime = new Date();
+                document.getElementById("checkOutTime").innerText = checkOutTime.toLocaleString();
+                localStorage.setItem('checkOutTime', checkOutTime.toString()); // Save check-out time to localStorage
+                document.getElementById("status").innerText = "You have checked out!";
+            } else {
+                alert("You have already checked out.");
+            }
+            checkInData[currentUser].checkOut = checkOutTime.toString();
+            localStorage.setItem('checkInData', JSON.stringify(checkInData));
+            updateList(); 
+        }
+        function logout() {
+            localStorage.removeItem('currentUser');
+            localStorage.removeItem('checkInTime');
+            localStorage.removeItem('checkOutTime');
+            localStorage.removeItem('passwords');
+            document.getElementById("loginSection").classList.remove('hidden');
+            document.getElementById("attendanceSection").classList.add('hidden');
+            document.getElementById("userName").innerText = '';
+            document.getElementById("checkInTime").innerText = 'Not yet checked in';
+            document.getElementById("checkOutTime").innerText = 'Not yet checked out';
+            document.getElementById("status").innerText = '';
+            updateList();
+        }
+        function reset() {
+            if (confirm("Are you sure you want to reset all local data? This will clear all check-ins, check-outs, and passwords.")) {
+                localStorage.clear();
+                checkInData = {};
+                passwords = {};
+                updateList();
+                alert("All data has been reset.");
+            }
+        }
+        function updateList() {
+            const attendanceTable = document.getElementById("attendanceTable").getElementsByTagName('tbody')[0];
+            attendanceTable.innerHTML = '';
+            for (let user in checkInData) {
+                let checkInRecord = checkInData[user];
+                let checkInTime = new Date(checkInRecord.checkIn);
+                let checkOutTime = checkInRecord.checkOut ? new Date(checkInRecord.checkOut) : 'Not yet checked out';
+                let row = attendanceTable.insertRow();
+                row.insertCell(0).innerText = user;
+                row.insertCell(1).innerText = checkInTime.toLocaleString();
+                row.insertCell(2).innerText = checkOutTime === 'Not yet checked out' ? checkOutTime : checkOutTime.toLocaleString();
+            }
+        }
+    </script>
+</body>
+</html>
